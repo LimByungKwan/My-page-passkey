@@ -1,13 +1,15 @@
-# 내 소개 페이지에 패스키 달기
+# 과제 8 · 내 소개 페이지에 패스키 달기
 
 - **공개 결과물 URL:** https://my-page-passkey.vercel.app/
 - **소스 URL:** https://github.com/LimByungKwan/My-page-passkey
-- 기존 소스 저장소: https://github.com/LimByungKwan/My-page
+- 기존 과제 1: https://github.com/LimByungKwan/My-page
 - 확인 날짜: 2026-10-25, 한국 시간 기준. JSON의 Z 표기는 UTC이며 한국 시간은 9시간을 더한다.
 
 첫 화면은 로그인 없이 읽는 소개 페이지다. 공개 소개 아래의 정원 입구에서 비공개 노트로 이동한다. 심사자는 패스키나 계정을 등록할 필요 없이 공개 소개와 이 설명서·검증 기록을 확인하면 된다.
 
 비공개 자료는 연습 사용자 A·B를 위해 만든 가상 프로젝트 메모, 가상 지원 목록, 가상 회고다. 실제 연락처·주소·신분증 번호·상담 내용은 넣지 않았다. 기존 소개에서 공개를 선택한 내용은 유지했다. 패스키 PIN, 개인키, Supabase 비밀 키, 실제 세션·쿠키 값은 제출하지 않는다.
+
+![공개 소개 화면](evidence/public-home.png)
 
 기준별 확인 결과: [검증표](CHECKLIST.md) · [최종 검토](AUDIT.md) · [제출 양식](SUBMISSION.md)
 
