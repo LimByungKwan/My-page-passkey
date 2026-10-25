@@ -20,8 +20,8 @@ class Rejection extends Error {
 
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
-  if (!["GET", "POST", "PUT"].includes(req.method)) {
-    res.setHeader("Allow", "GET, POST, PUT");
+  if (!["GET", "POST", "PUT", "DELETE"].includes(req.method)) {
+    res.setHeader("Allow", "GET, POST, PUT, DELETE");
     return res.status(405).json({ error: "허용하지 않은 요청 방식입니다." });
   }
   if (req.method !== "GET") {
@@ -57,6 +57,15 @@ module.exports = async function handler(req, res) {
       if (!response.ok) {
         const problem = await response.json().catch(() => ({}));
         if (problem.code === "P0001") {
+          if (problem.message === "LAST_PASSKEY") {
+            throw new Rejection(409, "마지막 패스키는 삭제할 수 없습니다. 먼저 다른 패스키를 추가하세요.");
+          }
+          if (problem.message === "SESSION_INVALID") {
+            throw new Rejection(401, "로그인이 만료됐습니다. 다시 로그인해 주세요.");
+          }
+          if (problem.message === "CREDENTIAL_NOT_FOUND") {
+            throw new Rejection(404, "이 계정에서 삭제할 패스키를 찾지 못했습니다.");
+          }
           throw new Rejection(400, "만료되었거나 이미 사용한 요청입니다. 다시 로그인하고 시도하세요.");
         }
         if (problem.code === "23505") {
@@ -87,6 +96,19 @@ module.exports = async function handler(req, res) {
       });
       if (!Array.isArray(passkeys)) throw new Error("Invalid passkey list");
       return res.status(200).json({ passkeys, count: passkeys.length });
+    }
+
+    if (req.method === "DELETE") {
+      const credentialId = req.body?.credentialId;
+      if (typeof credentialId !== "string" ||
+          !/^[A-Za-z0-9_-]{1,2048}$/.test(credentialId)) {
+        throw new Rejection(400, "삭제할 패스키를 선택해 주세요.");
+      }
+      const result = await database("/rest/v1/rpc/remove_passkey", {}, "POST", {
+        p_session_hash: sessionHash,
+        p_credential_id: credentialId
+      });
+      return res.status(200).json(result);
     }
 
     if (req.method === "POST") {
