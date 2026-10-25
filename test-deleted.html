@@ -14,12 +14,12 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#fff;padding:18px;bor
 <h1>삭제한 패스키로 로그인 거절 확인</h1>
 <p>서버에서 삭제한 패스키를 기기에서 선택해 실제 로그인 응답을 보냅니다. 기기 저장소에서는 아직 해당 패스키를 삭제하지 마세요.</p>
 <form id="test-form">
-<label for="credential-id">삭제한 패스키의 공개 식별자</label>
-<input id="credential-id" required maxlength="2048" autocomplete="off" spellcheck="false">
-<p>삭제했던 같은 탭에서는 식별자가 자동 입력됩니다. 비어 있으면 삭제 기록의 credentialId를 붙여 넣으세요. 이 값은 PIN이나 세션 값이 아닙니다.</p>
+<label for="credential-id">삭제한 패스키의 공개 식별자 (선택)</label>
+<input id="credential-id" maxlength="2048" autocomplete="off" spellcheck="false">
+<p>입력칸을 비워 두어도 검사할 수 있습니다. 기기 선택 창에서 삭제했던 패스키가 남아 있는 Windows Hello를 선택하세요.</p>
 <button id="run" type="submit">삭제한 패스키로 로그인 검사</button>
 </form>
-<p id="status" role="status" aria-live="polite">삭제한 ‘1212’의 공개 식별자를 확인해 주세요.</p>
+<p id="status" role="status" aria-live="polite">입력칸이 비어 있으면 그대로 검사하고 Windows Hello를 선택하세요.</p>
 <div id="results"></div>
 <script>
 "use strict";
@@ -63,7 +63,7 @@ form.addEventListener("submit", async event => {
   event.preventDefault();
   if (button.disabled) return;
   const id = input.value.trim();
-  if (!/^[A-Za-z0-9_-]{1,2048}$/.test(id)) {
+  if (id && !/^[A-Za-z0-9_-]{1,2048}$/.test(id)) {
     status.textContent = "삭제 기록의 credentialId 전체를 입력해 주세요.";
     return;
   }
@@ -74,6 +74,19 @@ form.addEventListener("submit", async event => {
     if (!window.isSecureContext || !window.PublicKeyCredential) {
       throw new Error("배포된 HTTPS 주소에서 패스키 지원 브라우저로 열어 주세요.");
     }
+    const [accountResponse, keysResponse] = await Promise.all([
+      fetch("/api/private", { credentials: "same-origin", cache: "no-store" }),
+      fetch("/api/passkeys", { credentials: "same-origin", cache: "no-store" })
+    ]);
+    if (accountResponse.status === 401 || keysResponse.status === 401) {
+      throw new Error("먼저 비공개 노트에서 남아 있는 Google 패스키로 로그인한 뒤 이 페이지를 다시 여세요.");
+    }
+    if (!accountResponse.ok || !keysResponse.ok) throw new Error("현재 계정의 패스키 목록을 확인하지 못했습니다.");
+    const account = await accountResponse.json();
+    const keys = await keysResponse.json();
+    if (typeof account.accountId !== "string" || !Array.isArray(keys.passkeys)) {
+      throw new Error("계정 정보를 읽지 못했습니다.");
+    }
     status.textContent = "새 로그인 질문을 준비하고 있습니다.";
     const issued = await post("/api/login-options", {});
     record("1. 새 질문 발급", "/api/login-options", {}, issued);
@@ -83,11 +96,20 @@ form.addEventListener("submit", async event => {
     const credential = await navigator.credentials.get({
       publicKey: {
         ...options, challenge: decode(options.challenge),
-        allowCredentials: [{ type: "public-key", id: decode(id) }]
+        hints: ["client-device"],
+        allowCredentials: id ? [{ type: "public-key", id: decode(id) }] : []
       }
     });
     if (!credential) throw new Error("기기 확인이 취소됐습니다.");
-    if (credential.id !== id) throw new Error("선택된 패스키가 검사 대상과 다릅니다.");
+    if (id && credential.id !== id) throw new Error("선택된 패스키가 검사 대상과 다릅니다.");
+    if (keys.passkeys.some(key => key.credential_id === credential.id)) {
+      throw new Error("아직 등록된 패스키를 선택했습니다. 다시 검사하면서 삭제했던 패스키의 Windows Hello 저장소를 선택해 주세요.");
+    }
+    const userHandle = credential.response.userHandle;
+    if (!userHandle ||
+        new TextDecoder().decode(userHandle) !== account.accountId) {
+      throw new Error("현재 계정의 패스키인지 확인하지 못했습니다. 삭제했던 같은 계정의 Windows Hello 패스키를 선택해 주세요.");
+    }
     const payload = {
       id: credential.id, rawId: encode(credential.rawId), type: credential.type,
       authenticatorAttachment: credential.authenticatorAttachment || undefined,
