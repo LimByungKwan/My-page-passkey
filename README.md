@@ -1,8 +1,8 @@
-# 과제 8 · 내 소개 페이지에 패스키 달기
+# 내 소개 페이지에 패스키 달기
 
 - **공개 결과물 URL:** https://my-page-passkey.vercel.app/
 - **소스 URL:** https://github.com/LimByungKwan/My-page-passkey
-- 기존 과제 1: https://github.com/LimByungKwan/My-page
+- 기존 소스 저장소: https://github.com/LimByungKwan/My-page
 - 확인 날짜: 2026-10-25, 한국 시간 기준. JSON의 Z 표기는 UTC이며 한국 시간은 9시간을 더한다.
 
 첫 화면은 로그인 없이 읽는 소개 페이지다. 공개 소개 아래의 정원 입구에서 비공개 노트로 이동한다. 심사자는 패스키나 계정을 등록할 필요 없이 공개 소개와 이 설명서·검증 기록을 확인하면 된다.
