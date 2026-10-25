@@ -1,0 +1,65 @@
+{
+  "passed": true,
+  "checkedAt": "2026-10-25T03:32:36.685Z",
+  "explanation": "서버가 로그아웃 전의 동일한 세션 값을 다시 전송했습니다. 실제 값은 가렸습니다.",
+  "records": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/private",
+        "cookie": "[가림: 같은 세션 A]"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "accountId": "5df137ad-152f-45ee-bb5e-2a0427bb682a",
+          "items": [
+            {
+              "id": "3566143f-12d3-4103-b482-6224d780455c",
+              "title": "가상 회고",
+              "content": "연습 사용자 A의 연습 자료: 오늘은 문제를 작은 단계로 나누어 해결했다."
+            },
+            {
+              "id": "873922dc-168c-44b8-b585-e24d8091bc8b",
+              "title": "가상 프로젝트 메모",
+              "content": "연습 사용자 A의 연습 자료: 작은 탐험 게임의 배경을 구상한다."
+            },
+            {
+              "id": "c3f57f34-87ec-47c5-9105-2bf84e5380fd",
+              "title": "가상 지원 예정 목록",
+              "content": "연습 사용자 A의 연습 자료: 가상의 별빛 스튜디오를 조사한다."
+            }
+          ],
+          "count": 3
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/logout",
+        "cookie": "[가림: 같은 세션 A]"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "ok": true,
+          "message": "로그아웃했습니다."
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/private",
+        "cookie": "[가림: 같은 세션 A]"
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "error": "로그인이 만료됐습니다. 다시 로그인해 주세요."
+        }
+      }
+    }
+  ]
+}

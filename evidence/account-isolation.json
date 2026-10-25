@@ -1,0 +1,73 @@
+{
+  "source": "사용자가 실제 요청 후 제공한 응답과 Network 캡처를 정리한 기록. 시각은 별도로 기록하지 않음.",
+  "accounts": {
+    "A": "5df137ad-152f-45ee-bb5e-2a0427bb682a",
+    "B": "67d859c8-1b0a-415b-b28d-1bbf93ce2cf8"
+  },
+  "records": [
+    {
+      "signedInAs": "B",
+      "request": {
+        "method": "GET",
+        "path": "/api/private?accountId=5df137ad-152f-45ee-bb5e-2a0427bb682a"
+      },
+      "response": {
+        "status": 403,
+        "body": {
+          "error": "다른 계정의 비공개 자료는 볼 수 없습니다."
+        }
+      }
+    },
+    {
+      "signedInAs": "A",
+      "request": {
+        "method": "GET",
+        "path": "/api/private?accountId=67d859c8-1b0a-415b-b28d-1bbf93ce2cf8"
+      },
+      "response": {
+        "status": 403,
+        "body": {
+          "error": "다른 계정의 비공개 자료는 볼 수 없습니다."
+        }
+      }
+    },
+    {
+      "signedInAs": "A",
+      "request": {
+        "method": "GET",
+        "path": "/api/private?account_id=67d859c8-1b0a-415b-b28d-1bbf93ce2cf8"
+      },
+      "responseBody": {
+        "accountId": "5df137ad-152f-45ee-bb5e-2a0427bb682a",
+        "items": [
+          {
+            "id": "3566143f-12d3-4103-b482-6224d780455c",
+            "title": "가상 회고",
+            "content": "연습 사용자 A의 연습 자료: 오늘은 문제를 작은 단계로 나누어 해결했다."
+          },
+          {
+            "id": "873922dc-168c-44b8-b585-e24d8091bc8b",
+            "title": "가상 프로젝트 메모",
+            "content": "연습 사용자 A의 연습 자료: 작은 탐험 게임의 배경을 구상한다."
+          },
+          {
+            "id": "c3f57f34-87ec-47c5-9105-2bf84e5380fd",
+            "title": "가상 지원 예정 목록",
+            "content": "연습 사용자 A의 연습 자료: 가상의 별빛 스튜디오를 조사한다."
+          }
+        ],
+        "count": 3
+      }
+    }
+  ],
+  "counts": {
+    "before": {
+      "A": 3,
+      "B": 3
+    },
+    "after": {
+      "A": 3,
+      "B": 3
+    }
+  }
+}

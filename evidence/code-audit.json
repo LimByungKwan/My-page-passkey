@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-25T07:46:19.985Z",
+  "type": "보조 자동 검사: 실제 배포가 아닌 저장소 서버 코드와 모의 데이터베이스 응답 사용",
+  "passed": 13,
+  "tests": [
+    "private: no session -> 401",
+    "private: wrong method -> 405",
+    "private: expired session -> 401",
+    "private: foreign account -> 403 before reading items",
+    "private: arbitrary account_id ignored; query uses session owner",
+    "logout: wrong origin -> 403",
+    "logout: deletes hashed current session then clears cookie",
+    "logout: database failure does not claim success",
+    "registration cancel: wrong origin -> 403",
+    "registration cancel: deletes only matching unused registration question",
+    "registration cancel: no binding is harmless and idempotent",
+    "registration cancel: failed cleanup -> 503",
+    "passkey deletion: last-key SQL rejection -> 409"
+  ]
+}

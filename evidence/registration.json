@@ -1,0 +1,152 @@
+{
+  "source": "사용자가 검사 페이지에서 복사해 제공한 실제 요청·응답. 세션과 쿠키 값은 포함하지 않음.",
+  "records": [
+    {
+      "time": "2026-10-25T06:28:50.324Z",
+      "request": {
+        "method": "GET",
+        "path": "/api/passkeys"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "passkeys": [
+            {
+              "credential_id": "SbKYv3krB1YJTgETp8Z7og",
+              "name": "Google 백업 패스키",
+              "created_at": "2026-10-25T05:55:18.309422+00:00",
+              "device_type": "multiDevice",
+              "backed_up": true
+            }
+          ],
+          "count": 1
+        }
+      }
+    },
+    {
+      "time": "2026-10-25T06:28:53.569Z",
+      "request": {
+        "method": "POST",
+        "path": "/api/passkeys",
+        "body": {
+          "passkeyName": "Windows Hello 예비 패스키"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "options": {
+            "challenge": "BFk0gTWB1WIsDS1sNHqAx_cJF5JS2QT43blPIrZZ7LY",
+            "rp": {
+              "name": "나의 소개 · 비공개 노트",
+              "id": "my-page-passkey.vercel.app"
+            },
+            "user": {
+              "id": "NWRmMTM3YWQtMTUyZi00NWVlLWJiNWUtMmEwNDI3YmI2ODJh",
+              "name": "5df137ad-152f-45ee-bb5e-2a0427bb682a",
+              "displayName": "연습 사용자 A"
+            },
+            "pubKeyCredParams": [
+              {
+                "alg": -8,
+                "type": "public-key"
+              },
+              {
+                "alg": -7,
+                "type": "public-key"
+              },
+              {
+                "alg": -257,
+                "type": "public-key"
+              }
+            ],
+            "timeout": 60000,
+            "attestation": "none",
+            "excludeCredentials": [
+              {
+                "id": "SbKYv3krB1YJTgETp8Z7og",
+                "transports": [
+                  "hybrid",
+                  "internal"
+                ],
+                "type": "public-key"
+              }
+            ],
+            "authenticatorSelection": {
+              "residentKey": "required",
+              "userVerification": "required",
+              "requireResidentKey": true
+            },
+            "extensions": {
+              "credProps": true
+            },
+            "hints": []
+          }
+        }
+      }
+    },
+    {
+      "time": "2026-10-25T06:29:09.525Z",
+      "request": {
+        "method": "PUT",
+        "path": "/api/passkeys",
+        "body": {
+          "credential": {
+            "id": "MtQzISmELJTKZmmB4c--1Seb0EAxRh96BQXEhv4JK0I",
+            "rawId": "MtQzISmELJTKZmmB4c--1Seb0EAxRh96BQXEhv4JK0I",
+            "type": "public-key",
+            "authenticatorAttachment": "platform",
+            "clientExtensionResults": {
+              "credProps": {
+                "rk": true
+              }
+            },
+            "response": {
+              "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQkZrMGdUV0IxV0lzRFMxc05IcUF4X2NKRjVKUzJRVDQzYmxQSXJaWjdMWSIsIm9yaWdpbiI6Imh0dHBzOi8vbXktcGFnZS1wYXNza2V5LnZlcmNlbC5hcHAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+              "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikjYGaJs8LarfX2QhTuf8gVpudJ0nlqAnhTodo3N6vlCtFAAAAAJ3dGBevWkZyork-PdlQAKkAIDLUMyEphCyUymZpgeHPvtUnm9BAMUYfegUFxIb-CStCpQECAyYgASFYINjtJsyvMh2y4kO5zPnmyOxh2TwKXt5sBEPsrFmo7--BIlggiDYWROgD9_tCb46HWwmwrgUteiQEnRQOlchpdJeFNM4",
+              "transports": [
+                "internal"
+              ]
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "verified": true,
+          "message": "같은 계정에 패스키를 추가했습니다."
+        }
+      }
+    },
+    {
+      "time": "2026-10-25T06:29:11.053Z",
+      "request": {
+        "method": "GET",
+        "path": "/api/passkeys"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "passkeys": [
+            {
+              "credential_id": "SbKYv3krB1YJTgETp8Z7og",
+              "name": "Google 백업 패스키",
+              "created_at": "2026-10-25T05:55:18.309422+00:00",
+              "device_type": "multiDevice",
+              "backed_up": true
+            },
+            {
+              "credential_id": "MtQzISmELJTKZmmB4c--1Seb0EAxRh96BQXEhv4JK0I",
+              "name": "Windows Hello 예비 패스키",
+              "created_at": "2026-10-25T06:29:11.016881+00:00",
+              "device_type": "singleDevice",
+              "backed_up": false
+            }
+          ],
+          "count": 2
+        }
+      }
+    }
+  ]
+}

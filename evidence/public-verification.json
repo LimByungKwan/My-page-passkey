@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-25T07:46:41.584Z",
+  "method": "로그인·쿠키 없이 실행한 읽기 전용 확인",
+  "sourceFileCount": 21,
+  "sourceSyntax": "passed",
+  "knownSecretPatternScan": "passed",
+  "deployedThemeFilesMatchLocal": true,
+  "requests": [
+    {
+      "url": "https://my-page-passkey.vercel.app/",
+      "status": 200,
+      "finalURL": "https://my-page-passkey.vercel.app/",
+      "containsPrivateFixture": false
+    },
+    {
+      "url": "https://my-page-passkey.vercel.app/private.html",
+      "status": 200,
+      "finalURL": "https://my-page-passkey.vercel.app/private.html",
+      "containsPrivateFixture": false
+    },
+    {
+      "url": "https://my-page-passkey.vercel.app/api/private",
+      "status": 401,
+      "finalURL": "https://my-page-passkey.vercel.app/api/private",
+      "body": {
+        "error": "패스키로 로그인해 주세요."
+      }
+    },
+    {
+      "url": "https://my-page-passkey.vercel.app/api/passkeys",
+      "status": 401,
+      "finalURL": "https://my-page-passkey.vercel.app/api/passkeys",
+      "body": {
+        "error": "패스키로 먼저 로그인해 주세요."
+      }
+    },
+    {
+      "url": "https://github.com/LimByungKwan/My-page-passkey",
+      "status": 200,
+      "finalURL": "https://github.com/LimByungKwan/My-page-passkey"
+    }
+  ]
+}
