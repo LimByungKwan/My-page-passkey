@@ -49,6 +49,8 @@ button{border:0;border-radius:4px;padding:13px 20px;font:inherit;font-weight:700
 <button id="add-passkey-button" type="submit">같은 계정에 패스키 추가</button>
 </form>
 <p id="passkey-status" role="status" aria-live="polite"></p>
+<pre id="deletion-log" hidden style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:#f6f4ed;padding:16px"></pre>
+<p class="muted">마지막 패스키 1개는 삭제할 수 없습니다. 모든 패스키를 잃어버리면 현재는 계정 복구 방법이 없습니다.</p>
 </section>
 <p class="muted">패스키를 모두 잃으면 현재는 계정 복구 방법이 없습니다. 서로 다른 저장소에 패스키를 두 개 이상 준비해 주세요.</p>
 </main>
@@ -68,6 +70,8 @@ const passkeyCount = document.getElementById("passkey-count");
 const passkeyStatus = document.getElementById("passkey-status");
 const addPasskeyForm = document.getElementById("add-passkey-form");
 const addPasskeyButton = document.getElementById("add-passkey-button");
+const deletionLog = document.getElementById("deletion-log");
+let passkeyBusy = false;
 
 async function passkeyRequest(method, body) {
   const response = await fetch("/api/passkeys", {
@@ -78,7 +82,12 @@ async function passkeyRequest(method, body) {
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.error || "패스키 작업 오류 (" + response.status + ")");
+  if (!response.ok) {
+    const error = new Error(data?.error || "패스키 작업 오류 (" + response.status + ")");
+    error.status = response.status;
+    error.body = data;
+    throw error;
+  }
   if (!data) throw new Error("패스키 응답을 읽지 못했습니다.");
   return data;
 }
@@ -96,7 +105,50 @@ async function loadPasskeys() {
     name.textContent = key.name;
     const registered = new Date(key.created_at);
     date.textContent = " · 등록: " + registered.toLocaleString("ko-KR");
-    item.append(name, date);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary delete-passkey";
+    remove.style.cssText = "margin-left:12px;padding:5px 12px;font-size:13px";
+    remove.textContent = "삭제";
+    remove.addEventListener("click", async () => {
+      if (passkeyBusy) return;
+      if (!window.confirm("'" + key.name + "' 패스키를 이 사이트에서 해제할까요? 기기 저장소의 패스키 자체는 지우지 않습니다.")) return;
+      passkeyBusy = true;
+      addPasskeyButton.disabled = true;
+      logoutButton.disabled = true;
+      passkeyList.querySelectorAll("button").forEach(button => { button.disabled = true; });
+      const request = { method: "DELETE", path: "/api/passkeys", body: { credentialId: key.credential_id } };
+      try {
+        passkeyStatus.textContent = "서버에서 선택한 패스키를 삭제하고 있습니다.";
+        const result = await passkeyRequest("DELETE", request.body);
+        if (result.deleted !== true) throw new Error("삭제 완료를 확인하지 못했습니다.");
+        try {
+          sessionStorage.setItem("lastDeletedPasskey", JSON.stringify({
+            credentialId: key.credential_id, name: key.name
+          }));
+        } catch {}
+        deletionLog.textContent = JSON.stringify({
+          time: new Date().toISOString(), request,
+          response: { status: 200, body: result }
+        }, null, 2);
+        deletionLog.hidden = false;
+        await loadPasskeys();
+        passkeyStatus.textContent = "'" + key.name + "' 삭제 완료. 남은 패스키 " + result.remaining + "개입니다. 아래 요청·응답 기록을 보관해 주세요.";
+      } catch (error) {
+        deletionLog.textContent = JSON.stringify({
+          time: new Date().toISOString(), request,
+          response: { status: error.status || null, body: error.body || { error: error.message } }
+        }, null, 2);
+        deletionLog.hidden = false;
+        passkeyStatus.textContent = error.message || "삭제에 실패했습니다.";
+      } finally {
+        passkeyBusy = false;
+        addPasskeyButton.disabled = false;
+        logoutButton.disabled = false;
+        passkeyList.querySelectorAll("button").forEach(button => { button.disabled = false; });
+      }
+    });
+    item.append(name, date, remove);
     item.dataset.credentialId = key.credential_id;
     item.style.marginBottom = "10px";
     passkeyList.append(item);
@@ -108,7 +160,7 @@ async function loadPasskeys() {
 
 addPasskeyForm.addEventListener("submit", async event => {
   event.preventDefault();
-  if (addPasskeyButton.disabled) return;
+  if (addPasskeyButton.disabled || passkeyBusy) return;
   if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) {
     passkeyStatus.textContent = "패스키를 지원하는 브라우저의 HTTPS 주소에서 열어 주세요.";
     return;
@@ -175,6 +227,8 @@ function clearPrivate() {
   passkeyList.replaceChildren();
   passkeyCount.textContent = "";
   passkeyStatus.textContent = "";
+  deletionLog.hidden = true;
+  deletionLog.textContent = "";
   privateContent.hidden = true;
   itemsContainer.replaceChildren();
   count.textContent = "";
