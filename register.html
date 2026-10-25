@@ -17,14 +17,16 @@ button{width:100%;padding:14px;border:0;border-radius:4px;background:#1d4d3a;col
 #status{white-space:pre-line;overflow-wrap:anywhere}#status[data-state="error"]{color:#9c2424}#status[data-state="success"]{color:#1d4d3a;font-weight:700}
 [hidden]{display:none!important}@media(max-width:480px){main{margin-top:24px}.card{padding:20px}h1{font-size:26px}}
 </style>
+<link rel="stylesheet" href="garden.css">
+<script defer src="garden.js"></script>
 </head>
-<body>
+<body class="garden-register">
 <main>
 <a href="/">← 공개 소개로 돌아가기</a>
-<p class="kicker">PRIVATE NOTES / 패스키 등록</p>
+<p class="kicker">A KEY TO YOUR GARDEN / 패스키 등록</p>
 <h1>나만의 비공개 노트 만들기</h1>
 <p>비밀번호 없이, 기기의 패스키로 들어갈 새 계정을 만듭니다.</p>
-<p class="notice">공개 소개는 누구나 볼 수 있습니다. 현재는 첫 번째 패스키 등록을 확인하는 단계입니다. 비공개 자료 조회는 다음 단계에서 연결합니다.</p>
+<p class="notice">공개 소개는 누구나 볼 수 있습니다. 새 계정과 첫 패스키를 만들면 나만의 비공개 노트가 준비됩니다.</p>
 <section class="card" aria-labelledby="form-title">
 <h2 id="form-title">첫 번째 패스키 등록</h2>
 <form id="register-form">
@@ -32,9 +34,10 @@ button{width:100%;padding:14px;border:0;border-radius:4px;background:#1d4d3a;col
 <input id="display-name" name="displayName" maxlength="40" value="연습 사용자 A" autocomplete="off" required>
 <label for="passkey-name">패스키에 붙일 이름</label>
 <input id="passkey-name" name="passkeyName" maxlength="60" value="첫 번째 패스키" autocomplete="off" required>
-<p class="muted">실제 개인정보는 입력하지 마세요. 이 버튼은 매번 새 계정을 만듭니다. 같은 계정에 두 번째 패스키를 추가하는 기능은 다음 단계에서 연결합니다.</p>
+<p class="muted">실제 개인정보는 입력하지 마세요. 이 버튼은 매번 새 계정을 만듭니다. 기존 계정에 패스키를 추가하려면 비공개 노트에 로그인한 뒤 패스키 관리에서 진행하세요.</p>
 <button id="register-button" type="submit">패스키로 새 계정 만들기</button>
 </form>
+<a id="registered-link" class="primary-link register-next" href="/private.html" hidden>내 비공개 노트 열기 ↗</a>
 <p id="status" role="status" aria-live="polite">등록할 기기나 패스키 저장소를 준비해 주세요.</p>
 </section>
 <p class="muted">패스키 개인키는 이 사이트의 서버에 전송하지 않습니다. 서버에는 공개키를 저장합니다. 모든 패스키를 잃으면 현재는 계정에 다시 들어올 복구 방법이 없습니다.</p>
@@ -115,7 +118,8 @@ form.addEventListener("submit", async event => {
     const result = await post("/api/register-verify", { credential: payload });
     if (result.verified !== true) throw new Error("등록 확인에 실패했습니다.");
     form.hidden = true;
-    setStatus("패스키 등록을 완료했습니다.\n다음 단계에서 비공개 자료 조회와 재로그인을 연결합니다.", "success");
+    document.getElementById("registered-link").hidden = false;
+    setStatus("패스키 등록을 완료했습니다.\n아래 버튼으로 내 비공개 노트를 열어 보세요.", "success");
   } catch (error) {
     if (error.name === "NotAllowedError" || error.name === "AbortError") {
       setStatus("등록을 취소했거나 기기 확인 시간이 지났습니다. 계정과 공개키는 서버에 저장되지 않았습니다. 다시 시도할 수 있습니다.", "error");

@@ -8,12 +8,14 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231d4d3a'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='sans-serif' font-size='36' fill='%23fff'%3EB%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script defer src="script.js"></script>
+  <link rel="stylesheet" href="garden.css">
+  <script defer src="garden.js"></script>
 </head>
-<body>
+<body class="garden-public">
   <a class="skip" href="#main">본문 바로가기</a>
   <header class="site-header wrap">
     <a class="brand" href="#home" aria-label="임병관 소개 처음으로">BYUNGKWAN<span class="brand-dot">●</span></a>
-    <nav aria-label="주요 메뉴"><a href="#experiences">경험</a><a href="#interests">관심사</a><a href="#values">가치와 방식</a><a href="#scope">공개 범위</a></nav>
+    <nav aria-label="주요 메뉴"><a href="#experiences">경험</a><a href="#interests">관심사</a><a href="#values">가치와 방식</a><a href="#scope">공개 범위</a><a class="private-nav" href="#private-entry">비공개 노트 ↗</a></nav>
   </header>
   <main id="main">
     <section class="hero wrap" id="home" aria-labelledby="intro-title">
@@ -76,6 +78,16 @@
         <div><h3>공개하지 않는 것</h3><ul><li>전화번호·개인 이메일·상세 주소</li><li>비밀번호·토큰·API 키와 계정 복구 정보</li><li>개인 상담·감정 기록</li><li>금전 이야기·사적인 과거의 세부 내용</li><li>세부 생활시간·이동 경로</li><li>허락받지 않은 타인 정보</li></ul></div>
       </div>
     </div></section>
+    <section class="private-gate wrap" id="private-entry" aria-labelledby="private-entry-title">
+      <div>
+        <p class="gate-badge">PRIVATE GARDEN / 패스키로 잠긴 공간</p>
+        <h2 id="private-entry-title">나만의 기록은,<br>정원 안쪽에.</h2>
+        <p>위의 소개는 누구나 읽을 수 있는 공개 영역입니다.<br>개인 노트는 별도의 비공개 공간에서 패스키로 로그인한 뒤에만 열립니다.</p>
+        <a class="primary-link" href="/private.html">비공개 노트로 들어가기 <span aria-hidden="true">↗</span></a>
+        <p class="gate-note">비공개 자료는 모두 과제용 가상 내용입니다. 공개 화면에는 자료 본문을 포함하지 않습니다.</p>
+      </div>
+      <div class="gate-art" aria-hidden="true"></div>
+    </section>
   </main>
   <footer class="wrap"><p>임병관 <span>조용히, 꾸준히, 나답게.</span></p><a href="#home">맨 위로 ↑</a></footer>
 </body>
