@@ -193,10 +193,7 @@ module.exports = async function handler(req, res) {
       throw new Error("Session creation failed");
     }
 
-    res.setHeader("Set-Cookie", [
-      "__Host-passkey_session=" + token + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200",
-      "__Host-passkey_flow=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0"
-    ]);
+    res.setHeader("Set-Cookie", "__Host-passkey_session=" + token + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200");
     return res.status(200).json({
       verified: true,
       message: "패스키로 로그인했습니다."
