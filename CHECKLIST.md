@@ -51,10 +51,3 @@
 | T08-C51 | 완료 | README ⑥의 복구·요청 제한·기존 세션 폐기 한계 |
 | T08-C52 | 완료 | README의 짧은 확인 방법 4줄 |
 | T08-C53 | 완료 | README ⑤ AI와 내 판단 3줄 |
-
-## 제출 직전
-
-- [ ] Publish-Task08.ps1로 검토 파일을 한 번 커밋·푸시한다.
-- [ ] 새 시크릿 창에서 결과물 URL과 소스 URL을 열어 등록·로그인·CAPTCHA 없이 확인한다.
-- [ ] README의 증거 링크와 database.sql이 열리는지 확인한다.
-- [ ] Vercel 반영 후 게시 스크립트의 최종 검사 passed=true를 확인한다.
