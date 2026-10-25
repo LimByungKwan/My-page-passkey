@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>패스키 등록 · 비공개 노트</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}
+body{margin:0;background:#f6f4ed;color:#202d25;font-family:"Malgun Gothic",system-ui,sans-serif;line-height:1.8;word-break:keep-all}
+main{width:min(600px,calc(100% - 40px));margin:48px auto}a{color:#1d4d3a;text-underline-offset:4px}
+.kicker{margin:32px 0 8px;color:#1d4d3a;font-size:12px;letter-spacing:.1em;font-weight:700}h1{font-size:30px;line-height:1.4;margin:0 0 16px}h2{font-size:20px;margin-top:0}p{margin:12px 0}.muted{color:#58635b;font-size:14px}
+.card{background:#fffef9;border:1px solid #c9cec4;padding:28px;border-radius:8px;margin:24px 0}
+label{display:block;font-weight:700;font-size:14px;margin-bottom:6px}input{display:block;width:100%;padding:12px;margin-bottom:20px;border:1px solid #7d897e;border-radius:4px;font:inherit;background:#fff}
+button{width:100%;padding:14px;border:0;border-radius:4px;background:#1d4d3a;color:white;font:inherit;font-weight:700;cursor:pointer}button:disabled{opacity:.65;cursor:wait}
+:focus-visible{outline:3px solid #795100;outline-offset:4px}.notice{padding:16px;background:#e6ebdf;border-left:3px solid #1d4d3a;font-size:14px}
+#status{white-space:pre-line;overflow-wrap:anywhere}#status[data-state="error"]{color:#9c2424}#status[data-state="success"]{color:#1d4d3a;font-weight:700}
+[hidden]{display:none!important}@media(max-width:480px){main{margin-top:24px}.card{padding:20px}h1{font-size:26px}}
+</style>
+</head>
+<body>
+<main>
+<a href="/">← 공개 소개로 돌아가기</a>
+<p class="kicker">PRIVATE NOTES / 패스키 등록</p>
+<h1>나만의 비공개 노트 만들기</h1>
+<p>비밀번호 없이, 기기의 패스키로 들어갈 새 계정을 만듭니다.</p>
+<p class="notice">공개 소개는 누구나 볼 수 있습니다. 현재는 첫 번째 패스키 등록을 확인하는 단계입니다. 비공개 자료 조회는 다음 단계에서 연결합니다.</p>
+<section class="card" aria-labelledby="form-title">
+<h2 id="form-title">첫 번째 패스키 등록</h2>
+<form id="register-form">
+<label for="display-name">연습용 별명</label>
+<input id="display-name" name="displayName" maxlength="40" value="연습 사용자 A" autocomplete="off" required>
+<label for="passkey-name">패스키에 붙일 이름</label>
+<input id="passkey-name" name="passkeyName" maxlength="60" value="첫 번째 패스키" autocomplete="off" required>
+<p class="muted">실제 개인정보는 입력하지 마세요. 이 버튼은 매번 새 계정을 만듭니다. 같은 계정에 두 번째 패스키를 추가하는 기능은 다음 단계에서 연결합니다.</p>
+<button id="register-button" type="submit">패스키로 새 계정 만들기</button>
+</form>
+<p id="status" role="status" aria-live="polite">등록할 기기나 패스키 저장소를 준비해 주세요.</p>
+</section>
+<p class="muted">패스키 개인키는 이 사이트의 서버에 전송하지 않습니다. 서버에는 공개키를 저장합니다. 모든 패스키를 잃으면 현재는 계정에 다시 들어올 복구 방법이 없습니다.</p>
+</main>
+<script>
+"use strict";
+const form = document.getElementById("register-form");
+const button = document.getElementById("register-button");
+const status = document.getElementById("status");
+function decode(value) {
+  const base = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base + "=".repeat((4 - base.length % 4) % 4);
+  return Uint8Array.from(atob(padded), char => char.charCodeAt(0));
+}
+function encode(buffer) {
+  let binary = "";
+  for (const byte of new Uint8Array(buffer)) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function setStatus(message, state = "") {
+  status.textContent = message;
+  status.dataset.state = state;
+}
+async function post(url, body) {
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.error || "서버 오류 (" + response.status + ")");
+  }
+  if (!data) throw new Error("서버 응답을 읽지 못했습니다.");
+  return data;
+}
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (button.disabled) return;
+  if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) {
+    setStatus("HTTPS 주소와 패스키를 지원하는 브라우저에서 열어 주세요.", "error");
+    return;
+  }
+  button.disabled = true;
+  let deviceCreated = false;
+  try {
+    setStatus("서버에서 새 등록 질문을 준비하고 있습니다.");
+    const { options } = await post("/api/register-options", {
+      displayName: document.getElementById("display-name").value.trim(),
+      passkeyName: document.getElementById("passkey-name").value.trim()
+    });
+    const publicKey = {
+      ...options,
+      challenge: decode(options.challenge),
+      user: { ...options.user, id: decode(options.user.id) },
+      excludeCredentials: (options.excludeCredentials || []).map(item => ({
+        ...item, id: decode(item.id)
+      }))
+    };
+    setStatus("기기의 패스키 창에서 저장할 곳을 선택하고 확인해 주세요.");
+    const credential = await navigator.credentials.create({ publicKey });
+    if (!credential) throw new Error("패스키 등록이 취소됐습니다.");
+    deviceCreated = true;
+    const payload = {
+      id: credential.id,
+      rawId: encode(credential.rawId),
+      type: credential.type,
+      authenticatorAttachment: credential.authenticatorAttachment || undefined,
+      clientExtensionResults: credential.getClientExtensionResults(),
+      response: {
+        clientDataJSON: encode(credential.response.clientDataJSON),
+        attestationObject: encode(credential.response.attestationObject),
+        transports: credential.response.getTransports?.() || []
+      }
+    };
+    setStatus("서버에서 등록 결과를 검증하고 공개키를 저장하고 있습니다.");
+    const result = await post("/api/register-verify", { credential: payload });
+    if (result.verified !== true) throw new Error("등록 확인에 실패했습니다.");
+    form.hidden = true;
+    setStatus("패스키 등록을 완료했습니다.\n다음 단계에서 비공개 자료 조회와 재로그인을 연결합니다.", "success");
+  } catch (error) {
+    if (error.name === "NotAllowedError" || error.name === "AbortError") {
+      setStatus("등록을 취소했거나 기기 확인 시간이 지났습니다. 계정과 공개키는 서버에 저장되지 않았습니다. 다시 시도할 수 있습니다.", "error");
+    } else if (deviceCreated) {
+      setStatus(error.message + "\n기기에 패스키가 만들어졌지만 서버 등록 완료는 확인하지 못했습니다. 바로 다시 등록하지 말고 이 오류를 먼저 확인해 주세요.", "error");
+    } else {
+      setStatus(error.message || "등록을 준비하지 못했습니다. 다시 시도해 주세요.", "error");
+    }
+  } finally {
+    button.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
+
