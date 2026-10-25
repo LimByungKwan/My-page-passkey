@@ -38,7 +38,19 @@ button{border:0;border-radius:4px;padding:13px 20px;font:inherit;font-weight:700
 <p id="count"></p>
 <div id="items"></div>
 </section>
-<p class="muted">패스키를 모두 잃으면 현재는 계정 복구 방법이 없습니다. 두 번째 패스키를 같은 계정에 추가하는 기능은 다음 단계에서 연결합니다.</p>
+<section id="passkey-management" class="card" aria-labelledby="passkeys-title" hidden>
+<h2 id="passkeys-title">내 패스키 관리</h2>
+<p class="muted">이 목록은 현재 로그인한 계정에 등록된 패스키입니다. 기기를 잃을 때를 대비해 다른 저장소에 두 번째 패스키를 추가하세요.</p>
+<p id="passkey-count"></p>
+<ul id="passkey-list" style="padding-left:22px"></ul>
+<form id="add-passkey-form">
+<label for="add-passkey-name" style="display:block;font-weight:700;margin:20px 0 8px">추가할 패스키 이름</label>
+<input id="add-passkey-name" name="passkeyName" maxlength="60" required value="백업 패스키" style="display:block;width:100%;font:inherit;padding:12px;border:1px solid #7d897e;border-radius:4px;margin-bottom:14px">
+<button id="add-passkey-button" type="submit">같은 계정에 패스키 추가</button>
+</form>
+<p id="passkey-status" role="status" aria-live="polite"></p>
+</section>
+<p class="muted">패스키를 모두 잃으면 현재는 계정 복구 방법이 없습니다. 서로 다른 저장소에 패스키를 두 개 이상 준비해 주세요.</p>
 </main>
 <script>
 "use strict";
@@ -50,12 +62,119 @@ const privateContent = document.getElementById("private-content");
 const itemsContainer = document.getElementById("items");
 const count = document.getElementById("count");
 const registrationLink = document.getElementById("registration-link");
+const passkeyManagement = document.getElementById("passkey-management");
+const passkeyList = document.getElementById("passkey-list");
+const passkeyCount = document.getElementById("passkey-count");
+const passkeyStatus = document.getElementById("passkey-status");
+const addPasskeyForm = document.getElementById("add-passkey-form");
+const addPasskeyButton = document.getElementById("add-passkey-button");
+
+async function passkeyRequest(method, body) {
+  const response = await fetch("/api/passkeys", {
+    method,
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: body === undefined ? {} : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error || "패스키 작업 오류 (" + response.status + ")");
+  if (!data) throw new Error("패스키 응답을 읽지 못했습니다.");
+  return data;
+}
+
+async function loadPasskeys() {
+  passkeyList.replaceChildren();
+  passkeyCount.textContent = "";
+  passkeyStatus.textContent = "패스키 목록을 불러오고 있습니다.";
+  const data = await passkeyRequest("GET");
+  if (!Array.isArray(data.passkeys)) throw new Error("패스키 목록 형식이 올바르지 않습니다.");
+  for (const key of data.passkeys) {
+    const item = document.createElement("li");
+    const name = document.createElement("strong");
+    const date = document.createElement("span");
+    name.textContent = key.name;
+    const registered = new Date(key.created_at);
+    date.textContent = " · 등록: " + registered.toLocaleString("ko-KR");
+    item.append(name, date);
+    item.dataset.credentialId = key.credential_id;
+    item.style.marginBottom = "10px";
+    passkeyList.append(item);
+  }
+  passkeyCount.textContent = "등록된 패스키 " + data.passkeys.length + "개";
+  passkeyManagement.hidden = false;
+  passkeyStatus.textContent = "";
+}
+
+addPasskeyForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (addPasskeyButton.disabled) return;
+  if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) {
+    passkeyStatus.textContent = "패스키를 지원하는 브라우저의 HTTPS 주소에서 열어 주세요.";
+    return;
+  }
+  addPasskeyButton.disabled = true;
+  logoutButton.disabled = true;
+  let deviceCreated = false;
+  try {
+    passkeyStatus.textContent = "패스키 추가 질문을 준비하고 있습니다.";
+    const { options } = await passkeyRequest("POST", {
+      passkeyName: document.getElementById("add-passkey-name").value.trim()
+    });
+    const publicKey = {
+      ...options,
+      challenge: decode(options.challenge),
+      user: { ...options.user, id: decode(options.user.id) },
+      excludeCredentials: (options.excludeCredentials || []).map(item => ({
+        ...item, id: decode(item.id)
+      }))
+    };
+    passkeyStatus.textContent = "기기의 창에서 기존 패스키와 다른 저장소나 기기를 선택해 주세요.";
+    const credential = await navigator.credentials.create({ publicKey });
+    if (!credential) throw new Error("패스키 추가가 취소됐습니다.");
+    deviceCreated = true;
+    const payload = {
+      id: credential.id,
+      rawId: encode(credential.rawId),
+      type: credential.type,
+      authenticatorAttachment: credential.authenticatorAttachment || undefined,
+      clientExtensionResults: credential.getClientExtensionResults(),
+      response: {
+        clientDataJSON: encode(credential.response.clientDataJSON),
+        attestationObject: encode(credential.response.attestationObject),
+        transports: credential.response.getTransports?.() || []
+      }
+    };
+    passkeyStatus.textContent = "서버에서 검증한 뒤 공개키를 추가하고 있습니다.";
+    const result = await passkeyRequest("PUT", { credential: payload });
+    if (result.verified !== true) throw new Error("패스키 추가 확인에 실패했습니다.");
+    await loadPasskeys();
+    passkeyStatus.textContent = "같은 계정에 패스키를 추가했습니다. 목록의 이름과 등록 날짜를 확인해 주세요.";
+  } catch (error) {
+    const cancelled = error.name === "NotAllowedError" || error.name === "AbortError";
+    if (cancelled) {
+      passkeyStatus.textContent = "기기 확인을 취소했거나 시간이 지났습니다. 새 공개키는 저장되지 않았습니다. 기존 패스키는 유지됩니다.";
+    } else if (deviceCreated) {
+      passkeyStatus.textContent = error.message + "\n기기에서 생성됐지만 서버의 추가 완료는 확인하지 못했습니다. 바로 다시 추가하지 말고 오류를 먼저 확인해 주세요.";
+    } else {
+      passkeyStatus.textContent = error.message || "패스키 추가에 실패했습니다.";
+    }
+  } finally {
+    addPasskeyButton.disabled = false;
+    logoutButton.disabled = false;
+  }
+});
+
 
 function setStatus(message, state = "") {
   status.textContent = message;
   status.dataset.state = state;
 }
 function clearPrivate() {
+  passkeyManagement.hidden = true;
+  passkeyList.replaceChildren();
+  passkeyCount.textContent = "";
+  passkeyStatus.textContent = "";
   privateContent.hidden = true;
   itemsContainer.replaceChildren();
   count.textContent = "";
@@ -120,6 +239,10 @@ async function loadPrivate() {
   logoutButton.hidden = false;
   registrationLink.hidden = true;
   setStatus("로그인한 계정의 자료를 불러왔습니다.");
+  try { await loadPasskeys(); } catch (error) {
+    passkeyManagement.hidden = false;
+    passkeyStatus.textContent = error.message;
+  }
 }
 loginButton.addEventListener("click", async () => {
   if (loginButton.disabled) return;
