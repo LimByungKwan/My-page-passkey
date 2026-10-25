@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>비공개 노트 · 패스키 로그인</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:#f6f4ed;color:#202d25;font-family:"Malgun Gothic",system-ui,sans-serif;line-height:1.8;word-break:keep-all}
+main{width:min(820px,calc(100% - 40px));margin:40px auto}a{color:#1d4d3a;text-underline-offset:4px}.kicker{font-size:12px;color:#1d4d3a;font-weight:700;letter-spacing:.1em;margin:32px 0 8px}h1{font-size:32px;line-height:1.4;margin:0 0 16px}h2{font-size:21px;margin:0 0 12px}
+.card{background:#fffef9;border:1px solid #c9cec4;border-radius:8px;padding:28px;margin:24px 0}.muted{color:#58635b;font-size:14px}.boundary{padding:16px;border-left:3px solid #1d4d3a;background:#e6ebdf}
+button{border:0;border-radius:4px;padding:13px 20px;font:inherit;font-weight:700;background:#1d4d3a;color:#fff;cursor:pointer}button:disabled{opacity:.65;cursor:wait}.secondary{background:#e6ebdf;color:#1d4d3a;border:1px solid #a6b59e}.toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+:focus-visible{outline:3px solid #795100;outline-offset:4px}#status{white-space:pre-line;overflow-wrap:anywhere}#status[data-state="error"]{color:#9c2424}.badge{display:inline-block;border:1px solid #a6b59e;border-radius:20px;padding:3px 12px;font-size:13px;color:#1d4d3a}
+#items{display:grid;gap:16px;margin-top:20px}article{padding:20px;background:#f6f4ed;border:1px solid #c9cec4;border-radius:4px}article h3{font-size:18px;margin:0 0 8px}article p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:480px){main{margin-top:24px}.card{padding:20px}h1{font-size:27px}}
+</style>
+</head>
+<body>
+<main>
+<a href="/">← 공개 소개로 돌아가기</a>
+<p class="kicker">PRIVATE NOTES / 비공개 영역</p>
+<h1>나만의 비공개 노트</h1>
+<p class="boundary">공개 소개는 누구나 볼 수 있습니다. 이곳의 자료는 패스키 로그인 뒤에만 서버에서 받아 표시합니다.</p>
+<section class="card" aria-labelledby="access-title">
+<h2 id="access-title">패스키로 들어가기</h2>
+<p id="session-state" class="badge">로그인 상태 확인 중</p>
+<div class="toolbar">
+<button id="login" type="button" disabled>패스키로 로그인</button>
+<button id="logout" type="button" class="secondary" hidden>로그아웃</button>
+</div>
+<p id="registration-link" class="muted" hidden>아직 등록한 패스키가 없다면 <a href="/register.html">새 계정과 첫 패스키 등록</a>부터 진행하세요.</p>
+<p id="status" role="status" aria-live="polite">서버에서 로그인 상태를 확인하고 있습니다.</p>
+</section>
+<section id="private-content" class="card" aria-labelledby="notes-title" hidden>
+<h2 id="notes-title">내 비공개 자료</h2>
+<p class="muted">아래 자료는 모두 과제용으로 만든 가상 내용입니다.</p>
+<p id="count"></p>
+<div id="items"></div>
+</section>
+<p class="muted">패스키를 모두 잃으면 현재는 계정 복구 방법이 없습니다. 두 번째 패스키를 같은 계정에 추가하는 기능은 다음 단계에서 연결합니다.</p>
+</main>
+<script>
+"use strict";
+const loginButton = document.getElementById("login");
+const logoutButton = document.getElementById("logout");
+const status = document.getElementById("status");
+const sessionState = document.getElementById("session-state");
+const privateContent = document.getElementById("private-content");
+const itemsContainer = document.getElementById("items");
+const count = document.getElementById("count");
+const registrationLink = document.getElementById("registration-link");
+
+function setStatus(message, state = "") {
+  status.textContent = message;
+  status.dataset.state = state;
+}
+function clearPrivate() {
+  privateContent.hidden = true;
+  itemsContainer.replaceChildren();
+  count.textContent = "";
+}
+function showLocked() {
+  clearPrivate();
+  sessionState.textContent = "잠김 · 로그인 필요";
+  loginButton.hidden = false;
+  logoutButton.hidden = true;
+  registrationLink.hidden = false;
+}
+function decode(value) {
+  const base = value.replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(base + "=".repeat((4 - base.length % 4) % 4)), char => char.charCodeAt(0));
+}
+function encode(buffer) {
+  let binary = "";
+  for (const byte of new Uint8Array(buffer)) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+async function post(url, body = {}) {
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error || "서버 오류 (" + response.status + ")");
+  if (!data) throw new Error("서버 응답을 읽지 못했습니다.");
+  return data;
+}
+async function loadPrivate() {
+  clearPrivate();
+  const response = await fetch("/api/private", {
+    credentials: "same-origin",
+    cache: "no-store"
+  });
+  const data = await response.json().catch(() => null);
+  if (response.status === 401) {
+    showLocked();
+    setStatus("패스키로 로그인하면 내 자료를 볼 수 있습니다.");
+    return;
+  }
+  if (!response.ok || !Array.isArray(data?.items)) {
+    showLocked();
+    throw new Error(data?.error || "자료를 불러오지 못했습니다.");
+  }
+  for (const item of data.items) {
+    const article = document.createElement("article");
+    const title = document.createElement("h3");
+    const content = document.createElement("p");
+    title.textContent = item.title;
+    content.textContent = item.content;
+    article.append(title, content);
+    itemsContainer.append(article);
+  }
+  count.textContent = "자료 " + data.items.length + "개";
+  privateContent.hidden = false;
+  sessionState.textContent = "열림 · 로그인 확인됨";
+  loginButton.hidden = true;
+  logoutButton.hidden = false;
+  registrationLink.hidden = true;
+  setStatus("로그인한 계정의 자료를 불러왔습니다.");
+}
+loginButton.addEventListener("click", async () => {
+  if (loginButton.disabled) return;
+  if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) {
+    setStatus("HTTPS 주소와 패스키를 지원하는 브라우저에서 열어 주세요.", "error");
+    return;
+  }
+  loginButton.disabled = true;
+  clearPrivate();
+  try {
+    setStatus("서버에서 새 로그인 질문을 준비하고 있습니다.");
+    const { options } = await post("/api/login-options");
+    const publicKey = {
+      ...options,
+      challenge: decode(options.challenge),
+      allowCredentials: (options.allowCredentials || []).map(item => ({
+        ...item, id: decode(item.id)
+      }))
+    };
+    setStatus("기기의 패스키 창에서 등록한 패스키를 선택해 주세요.");
+    const credential = await navigator.credentials.get({ publicKey });
+    if (!credential) throw new Error("로그인이 취소됐습니다.");
+    const payload = {
+      id: credential.id,
+      rawId: encode(credential.rawId),
+      type: credential.type,
+      authenticatorAttachment: credential.authenticatorAttachment || undefined,
+      clientExtensionResults: credential.getClientExtensionResults(),
+      response: {
+        clientDataJSON: encode(credential.response.clientDataJSON),
+        authenticatorData: encode(credential.response.authenticatorData),
+        signature: encode(credential.response.signature),
+        userHandle: credential.response.userHandle ? encode(credential.response.userHandle) : null
+      }
+    };
+    setStatus("서버에서 공개키로 서명을 검증하고 있습니다.");
+    const result = await post("/api/login-verify", { credential: payload });
+    if (result.verified !== true) throw new Error("로그인 검증에 실패했습니다.");
+    await loadPrivate();
+  } catch (error) {
+    showLocked();
+    const cancelled = error.name === "NotAllowedError" || error.name === "AbortError";
+    setStatus(cancelled ? "로그인을 취소했거나 기기 확인 시간이 지났습니다. 다시 시도할 수 있습니다." : error.message, "error");
+  } finally {
+    loginButton.disabled = false;
+  }
+});
+logoutButton.addEventListener("click", async () => {
+  if (logoutButton.disabled) return;
+  logoutButton.disabled = true;
+  clearPrivate();
+  try {
+    setStatus("서버의 로그인 세션을 삭제하고 있습니다.");
+    await post("/api/logout");
+    showLocked();
+    setStatus("로그아웃했습니다. 비공개 자료를 보려면 다시 로그인하세요.");
+  } catch (error) {
+    sessionState.textContent = "로그아웃 완료 확인 필요";
+    setStatus(error.message + "\n로그아웃을 다시 시도해 주세요.", "error");
+  } finally {
+    logoutButton.disabled = false;
+  }
+});
+window.addEventListener("pagehide", clearPrivate);
+window.addEventListener("pageshow", event => {
+  if (event.persisted) loadPrivate().catch(error => setStatus(error.message, "error"));
+});
+loadPrivate().catch(error => {
+  showLocked();
+  setStatus(error.message || "로그인 상태를 확인하지 못했습니다.", "error");
+}).finally(() => { loginButton.disabled = false; });
+</script>
+</body>
+</html>
+
